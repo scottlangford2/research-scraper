@@ -1,0 +1,77 @@
+"""
+SAM.gov Federal Opportunities API scraper.
+
+Queries the SAM.gov Get Opportunities API for recent federal solicitations.
+Requires SAM_GOV_API_KEY in .env.
+"""
+
+import time
+from datetime import datetime, timedelta
+
+import requests
+
+from config import SAM_GOV_API_KEY, SAM_LOOKBACK_DAYS, REQUEST_TIMEOUT, POLITE_DELAY, log
+
+
+def scrape_sam_gov() -> list[dict]:
+    if not SAM_GOV_API_KEY:
+        log.warning("SAM_GOV_API_KEY not set — skipping SAM.gov")
+        return []
+
+    log.info("Querying SAM.gov Opportunities API...")
+    rfps: list[dict] = []
+
+    posted_from = (datetime.now() - timedelta(days=SAM_LOOKBACK_DAYS)).strftime("%m/%d/%Y")
+    posted_to = datetime.now().strftime("%m/%d/%Y")
+
+    offset = 0
+    limit = 1000
+
+    while True:
+        try:
+            params = {
+                "api_key": SAM_GOV_API_KEY,
+                "postedFrom": posted_from,
+                "postedTo": posted_to,
+                "ptype": "o,k,p,r",
+                "limit": limit,
+                "offset": offset,
+            }
+            resp = requests.get(
+                "https://api.sam.gov/prod/opportunities/v2/search",
+                params=params,
+                timeout=REQUEST_TIMEOUT,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+
+            opps = data.get("opportunitiesData", [])
+            if not opps:
+                break
+
+            for opp in opps:
+                rfps.append({
+                    "state": "Federal",
+                    "source": "SAM.gov",
+                    "id": opp.get("noticeId", ""),
+                    "title": opp.get("title", ""),
+                    "agency": opp.get("fullParentPathName", opp.get("department", "")),
+                    "status": opp.get("type", ""),
+                    "posted_date": opp.get("postedDate", ""),
+                    "close_date": opp.get("responseDeadLine", ""),
+                    "url": opp.get("uiLink", ""),
+                    "description": (opp.get("description", "") or "")[:1000],
+                })
+
+            total = data.get("totalRecords", 0)
+            offset += limit
+            if offset >= total:
+                break
+            time.sleep(POLITE_DELAY)
+
+        except requests.RequestException as e:
+            log.error(f"SAM.gov API query failed: {e}")
+            break
+
+    log.info(f"SAM.gov: {len(rfps)} federal opportunities")
+    return rfps
