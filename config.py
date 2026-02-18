@@ -40,8 +40,13 @@ SAM_GOV_API_KEY = os.getenv("SAM_GOV_API_KEY", "")
 
 SAM_LOOKBACK_DAYS = 30
 GRANTS_ROWS_PER_QUERY = 100
+SOCRATA_LOOKBACK_DAYS = 30
+ESBD_MAX_PAGES = 20
+BIDNET_MAX_PAGES_PER_STATE = 5
+NC_EVP_MAX_PAGES = 30
 REQUEST_TIMEOUT = 30
 POLITE_DELAY = 1  # seconds between paginated requests
+PLAYWRIGHT_TIMEOUT = 60000  # ms
 
 # ---------------------------------------------------------------------------
 # Logging
