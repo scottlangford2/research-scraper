@@ -38,103 +38,57 @@ SOCRATA_DATASETS = [
     {
         "state": "NY",
         "label": "New York Open Data",
-        "url": "https://data.ny.gov/resource/tpvk-ckga.json",
+        "url": "https://data.ny.gov/resource/ehig-g5x3.json",
         "date_candidates": [
-            "start_date", "contract_start_date", "effective_date",
-            "approval_date", "date",
+            "award_date", "begin_date", "renewal_date",
+            "fiscal_year_end_date",
         ],
         "title_candidates": [
-            "contract_description", "description", "title", "purpose",
+            "procurement_description", "type_of_procurement",
+            "contract_description", "description",
         ],
         "id_candidates": [
             "contract_number", "contract_id", "id",
         ],
-        "agency_candidates": ["agency_name", "authority_name", "agency"],
-        "end_date_candidates": ["end_date", "contract_end_date", "expiration_date"],
-    },
-    {
-        "state": "OK",
-        "label": "Oklahoma Open Data",
-        "url": "https://data.ok.gov/resource/j7cn-hx4f.json",
-        "date_candidates": [
-            "award_date", "effective_date", "start_date", "date",
-        ],
-        "title_candidates": [
-            "contract_description", "description", "title", "commodity_description",
-        ],
-        "id_candidates": [
-            "contract_number", "solicitation_number", "po_number", "id",
-        ],
-        "agency_candidates": ["agency_name", "agency", "department"],
-        "end_date_candidates": ["expiration_date", "end_date"],
-    },
-    {
-        "state": "VA",
-        "label": "Virginia Open Data",
-        "url": "https://data.virginia.gov/resource/cvsb-386s.json",
-        "date_candidates": [
-            "award_date", "effective_date", "start_date", "date",
-        ],
-        "title_candidates": [
-            "contract_description", "description", "title",
-            "commodity_description", "purpose",
-        ],
-        "id_candidates": [
-            "contract_number", "contract_id", "solicitation_number", "id",
-        ],
-        "agency_candidates": ["agency_name", "agency", "department", "buyer"],
-        "end_date_candidates": ["expiration_date", "end_date", "contract_end_date"],
+        "agency_candidates": ["authority_name", "agency_name", "agency"],
+        "end_date_candidates": ["end_date", "expiration_date"],
     },
     {
         "state": "WA",
         "label": "Washington Open Data",
-        "url": "https://data.wa.gov/resource/f6w5-q2ck.json",
+        "url": "https://data.wa.gov/resource/s8d5-pj78.json",
         "date_candidates": [
-            "start_date", "effective_date", "award_date", "date",
+            "contract_effective_start", "period_of_performance_start",
+            "start_date", "effective_date",
         ],
         "title_candidates": [
-            "contract_title", "contract_description", "description", "title",
+            "purpose_of_the_contract", "contract_description",
+            "description", "title",
         ],
         "id_candidates": [
-            "contract_number", "contract_id", "master_contract_number", "id",
+            "agency_contract_no", "agency_contract_amendment",
+            "contract_number", "contract_id",
         ],
-        "agency_candidates": ["agency_name", "agency", "department"],
+        "agency_candidates": ["agency_number_agency_name", "agency_name", "agency"],
         "end_date_candidates": ["end_date", "expiration_date"],
     },
     {
         "state": "MD",
         "label": "Maryland Open Data",
-        "url": "https://opendata.maryland.gov/resource/rba4-7ci8.json",
+        "url": "https://opendata.maryland.gov/resource/3tu2-tyav.json",
         "date_candidates": [
-            "start_date", "award_date", "effective_date", "date",
+            "date", "start_date", "award_date",
         ],
         "title_candidates": [
-            "description", "contract_description", "title", "purpose",
+            "short_description", "description", "title",
         ],
         "id_candidates": [
-            "contract_id", "contract_number", "id",
+            "bid_number", "contract_id", "id",
         ],
-        "agency_candidates": ["agency_name", "agency", "department"],
+        "agency_candidates": ["organization_name", "agency_name", "agency"],
         "end_date_candidates": ["end_date", "expiration_date"],
     },
-    {
-        "state": "CA",
-        "label": "California Open Data",
-        "url": "https://data.ca.gov/resource/35ea-j9pn.json",
-        "date_candidates": [
-            "purchase_date", "creation_date", "start_date",
-            "effective_date", "date",
-        ],
-        "title_candidates": [
-            "item_description", "description", "commodity_description",
-            "title", "line_description",
-        ],
-        "id_candidates": [
-            "purchase_order_number", "po_number", "contract_number", "id",
-        ],
-        "agency_candidates": ["agency_name", "department_name", "agency", "department"],
-        "end_date_candidates": ["expiration_date", "end_date"],
-    },
+    # NOTE: OK, VA, CA removed — no usable Socrata procurement datasets found.
 ]
 
 
