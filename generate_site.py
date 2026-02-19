@@ -60,7 +60,6 @@ def build_summary_data() -> dict:
     summary["generated"] = now.strftime("%Y-%m-%d %H:%M:%S")
     summary["total_rfps"] = int(len(df))
     summary["keyword_matches"] = int(df["keyword_match"].sum())
-    summary["match_rate"] = round(float(df["keyword_match"].mean()) * 100, 1)
     summary["states_covered"] = int(df["state"].nunique())
     summary["sources_active"] = int(df["source"].nunique())
 
@@ -136,23 +135,24 @@ def build_summary_data() -> dict:
         summary["gap_terms"] = []
         summary["rake_phrases"] = []
 
-    # --- Recent keyword-matched RFPs (top 25 by recency) ---
-    matched_df = df[df["keyword_match"] == True].copy()
-    if "scrape_timestamp" in matched_df.columns:
-        matched_df = matched_df.sort_values("scrape_timestamp", ascending=False)
+    # --- Full database (all RFPs, sorted by recency) ---
+    full_df = df.copy()
+    if "scrape_timestamp" in full_df.columns:
+        full_df = full_df.sort_values("scrape_timestamp", ascending=False)
 
-    summary["recent_matches"] = [
+    summary["full_database"] = [
         {
             "title": str(row.get("title", ""))[:120],
             "state": str(row.get("state", "")),
             "agency": str(row.get("agency", ""))[:80],
-            "matched_keywords": str(row.get("matched_keywords", "")),
             "url": str(row.get("url", "")),
             "source": str(row.get("source", "")),
             "posted_date": str(row.get("posted_date", "") or ""),
             "close_date": str(row.get("close_date", "") or ""),
+            "amount": str(row.get("amount", "") or ""),
+            "keyword_match": bool(row.get("keyword_match", False)),
         }
-        for _, row in matched_df.head(25).iterrows()
+        for _, row in full_df.iterrows()
     ]
 
     # --- Daily counts time series ---
@@ -184,6 +184,7 @@ def build_summary_data() -> dict:
         summary["daily_counts"] = []
 
     # --- Top matched keyword frequency ---
+    matched_df = df[df["keyword_match"] == True]
     all_kw: list[str] = []
     for kws in matched_df["matched_keywords"].dropna():
         all_kw.extend([k.strip() for k in str(kws).split(",") if k.strip()])
@@ -258,10 +259,6 @@ def _build_html(json_blob: str) -> str:
                 <div class="value green" id="keyword-matches">--</div>
             </div>
             <div class="card">
-                <div class="label">Match Rate</div>
-                <div class="value accent" id="match-rate">--</div>
-            </div>
-            <div class="card">
                 <div class="label">States Covered</div>
                 <div class="value" id="states-covered">--</div>
             </div>
@@ -297,26 +294,6 @@ def _build_html(json_blob: str) -> str:
                 <button class="chart-btn" data-mode="daily">Daily New</button>
             </div>
             <canvas id="line-chart" height="300"></canvas>
-        </div>
-    </section>
-
-    <!-- Recent Keyword-Matched RFPs -->
-    <section>
-        <h2 class="section-title">Recent Keyword-Matched RFPs</h2>
-        <div class="table-wrap" style="max-height: 500px; overflow-y: auto;">
-            <table>
-                <thead>
-                    <tr>
-                        <th>State</th>
-                        <th>Title</th>
-                        <th>Agency</th>
-                        <th>Keywords</th>
-                        <th>Source</th>
-                        <th>Close Date</th>
-                    </tr>
-                </thead>
-                <tbody id="recent-matches-body"></tbody>
-            </table>
         </div>
     </section>
 
@@ -392,6 +369,50 @@ def _build_html(json_blob: str) -> str:
         </div>
     </section>
 
+    <!-- Full Database -->
+    <section>
+        <h2 class="section-title">Full Database</h2>
+        <div style="margin-bottom:0.75rem; display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
+            <input type="text" id="db-search" placeholder="Search titles, agencies, states..."
+                   style="padding:0.4rem 0.75rem; border:1px solid var(--gray-300); border-radius:6px;
+                          font-size:0.85rem; width:280px;">
+            <select id="db-state-filter"
+                    style="padding:0.4rem 0.75rem; border:1px solid var(--gray-300); border-radius:6px;
+                           font-size:0.85rem;">
+                <option value="">All States</option>
+            </select>
+            <select id="db-source-filter"
+                    style="padding:0.4rem 0.75rem; border:1px solid var(--gray-300); border-radius:6px;
+                           font-size:0.85rem;">
+                <option value="">All Sources</option>
+            </select>
+            <label style="font-size:0.8rem; color:var(--gray-700); display:flex; align-items:center; gap:0.3rem;">
+                <input type="checkbox" id="db-match-only"> Keyword matches only
+            </label>
+            <span id="db-count" style="font-size:0.8rem; color:var(--gray-500); margin-left:auto;"></span>
+        </div>
+        <div class="table-wrap" style="max-height: 600px; overflow-y: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>State</th>
+                        <th>Title</th>
+                        <th>Agency</th>
+                        <th>Source</th>
+                        <th>Open Date</th>
+                        <th>Close Date</th>
+                        <th>Amount</th>
+                    </tr>
+                </thead>
+                <tbody id="db-body"></tbody>
+            </table>
+        </div>
+        <div style="margin-top:0.5rem; text-align:center;">
+            <button id="db-load-more" class="chart-btn"
+                    style="display:none;">Load more...</button>
+        </div>
+    </section>
+
 </main>
 
 <footer>
@@ -409,7 +430,6 @@ document.addEventListener('DOMContentLoaded', () => {{
     setText('last-updated', 'Last updated: ' + d.generated);
     setText('total-rfps', num(d.total_rfps));
     setText('keyword-matches', num(d.keyword_matches));
-    setText('match-rate', d.match_rate + '%');
     setText('states-covered', d.states_covered);
     setText('sources-active', d.sources_active);
     setText('scrape-date', d.scrape_date);
@@ -420,22 +440,8 @@ document.addEventListener('DOMContentLoaded', () => {{
     // --- Line chart ---
     renderLineChart(d.daily_counts || [], 'cumulative');
 
-    // --- Recent matches table ---
-    const matchBody = document.getElementById('recent-matches-body');
-    d.recent_matches.forEach(r => {{
-        const tr = document.createElement('tr');
-        const titleCell = r.url
-            ? '<a href="' + esc(r.url) + '" target="_blank" rel="noopener">' + esc(r.title) + '</a>'
-            : esc(r.title);
-        tr.innerHTML =
-            '<td><strong>' + esc(r.state) + '</strong></td>' +
-            '<td>' + titleCell + '</td>' +
-            '<td>' + esc(r.agency) + '</td>' +
-            '<td>' + esc(r.matched_keywords) + '</td>' +
-            '<td>' + esc(r.source) + '</td>' +
-            '<td>' + esc(r.close_date) + '</td>';
-        matchBody.appendChild(tr);
-    }});
+    // --- Full database ---
+    initFullDatabase(d.full_database || []);
 
     // --- State bar chart + table ---
     const maxStateTotal = Math.max(...d.states.map(s => s.total));
@@ -801,6 +807,91 @@ document.querySelectorAll('.chart-btn').forEach(btn => {{
         renderLineChart(DATA.daily_counts || [], btn.dataset.mode);
     }});
 }});
+
+// --- Full database with search, filters, and lazy loading ---
+function initFullDatabase(allRows) {{
+    const PAGE_SIZE = 100;
+    let filtered = allRows;
+    let shown = 0;
+
+    const body = document.getElementById('db-body');
+    const countEl = document.getElementById('db-count');
+    const loadMoreBtn = document.getElementById('db-load-more');
+    const searchInput = document.getElementById('db-search');
+    const stateFilter = document.getElementById('db-state-filter');
+    const sourceFilter = document.getElementById('db-source-filter');
+    const matchOnly = document.getElementById('db-match-only');
+
+    // Populate filter dropdowns
+    const states = [...new Set(allRows.map(r => r.state))].filter(Boolean).sort();
+    states.forEach(s => {{
+        const opt = document.createElement('option');
+        opt.value = s; opt.textContent = s;
+        stateFilter.appendChild(opt);
+    }});
+    const sources = [...new Set(allRows.map(r => r.source))].filter(Boolean).sort();
+    sources.forEach(s => {{
+        const opt = document.createElement('option');
+        opt.value = s; opt.textContent = s;
+        sourceFilter.appendChild(opt);
+    }});
+
+    function applyFilters() {{
+        const q = searchInput.value.toLowerCase().trim();
+        const st = stateFilter.value;
+        const src = sourceFilter.value;
+        const mo = matchOnly.checked;
+
+        filtered = allRows.filter(r => {{
+            if (st && r.state !== st) return false;
+            if (src && r.source !== src) return false;
+            if (mo && !r.keyword_match) return false;
+            if (q) {{
+                const hay = (r.title + ' ' + r.agency + ' ' + r.state + ' ' + r.source).toLowerCase();
+                if (!hay.includes(q)) return false;
+            }}
+            return true;
+        }});
+
+        shown = 0;
+        body.innerHTML = '';
+        renderPage();
+    }}
+
+    function renderPage() {{
+        const end = Math.min(shown + PAGE_SIZE, filtered.length);
+        for (let i = shown; i < end; i++) {{
+            const r = filtered[i];
+            const tr = document.createElement('tr');
+            if (r.keyword_match) tr.style.background = '#f0fdf4';
+            const titleCell = r.url
+                ? '<a href="' + esc(r.url) + '" target="_blank" rel="noopener">' + esc(r.title) + '</a>'
+                : esc(r.title);
+            tr.innerHTML =
+                '<td><strong>' + esc(r.state) + '</strong></td>' +
+                '<td>' + titleCell + '</td>' +
+                '<td>' + esc(r.agency) + '</td>' +
+                '<td>' + esc(r.source) + '</td>' +
+                '<td>' + esc(r.posted_date) + '</td>' +
+                '<td>' + esc(r.close_date) + '</td>' +
+                '<td>' + esc(r.amount) + '</td>';
+            body.appendChild(tr);
+        }}
+        shown = end;
+        countEl.textContent = 'Showing ' + num(shown) + ' of ' + num(filtered.length);
+        loadMoreBtn.style.display = shown < filtered.length ? 'inline-block' : 'none';
+    }}
+
+    // Event listeners
+    searchInput.addEventListener('input', applyFilters);
+    stateFilter.addEventListener('change', applyFilters);
+    sourceFilter.addEventListener('change', applyFilters);
+    matchOnly.addEventListener('change', applyFilters);
+    loadMoreBtn.addEventListener('click', renderPage);
+
+    // Initial render
+    renderPage();
+}}
 </script>
 
 </body>

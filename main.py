@@ -76,6 +76,7 @@ def main():
             "close_date": rfp.get("close_date", ""),
             "url": rfp.get("url", ""),
             "description": rfp.get("description", ""),
+            "amount": rfp.get("amount", ""),
             "keyword_match": match,
             "matched_keywords": ", ".join(keywords),
             "key_terms": ", ".join(key_terms),
