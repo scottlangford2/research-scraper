@@ -50,6 +50,19 @@ def scrape_sam_gov() -> list[dict]:
                 break
 
             for opp in opps:
+                # Extract dollar amount from award or estimate fields
+                amount = ""
+                award = opp.get("award") or {}
+                if isinstance(award, dict):
+                    amount = str(award.get("amount", "")) if award.get("amount") else ""
+                if not amount:
+                    for amt_key in ("estimatedValue", "baseAndAllOptionsValue",
+                                    "totalEstimatedContractValue", "amount"):
+                        val = opp.get(amt_key)
+                        if val:
+                            amount = str(val)
+                            break
+
                 rfps.append({
                     "state": "Federal",
                     "source": "SAM.gov",
@@ -61,6 +74,7 @@ def scrape_sam_gov() -> list[dict]:
                     "close_date": opp.get("responseDeadLine", ""),
                     "url": opp.get("uiLink", ""),
                     "description": (opp.get("description", "") or "")[:1000],
+                    "amount": amount,
                 })
 
             total = data.get("totalRecords", 0)

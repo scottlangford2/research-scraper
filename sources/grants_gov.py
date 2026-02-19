@@ -57,6 +57,16 @@ def scrape_grants_gov() -> list[dict]:
                     continue
                 seen_ids.add(opp_id)
 
+                # Extract funding amount
+                amount = ""
+                for amt_key in ("awardCeiling", "estimatedTotalProgramFunding",
+                                "awardFloor", "totalFundingAmount",
+                                "estimatedFunding", "ceiling", "amount"):
+                    val = hit.get(amt_key)
+                    if val:
+                        amount = str(val)
+                        break
+
                 rfps.append({
                     "state": "Federal",
                     "source": "Grants.gov",
@@ -68,6 +78,7 @@ def scrape_grants_gov() -> list[dict]:
                     "close_date": hit.get("closeDate", hit.get("deadline", "")),
                     "url": f"https://www.grants.gov/search-results-detail/{opp_id}" if opp_id else "",
                     "description": (hit.get("description", hit.get("synopsis", hit.get("title", ""))) or "")[:1000],
+                    "amount": amount,
                 })
 
             log.info(f"  Grants.gov query '{query[:50]}...': {len(hits)} hits")

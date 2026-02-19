@@ -174,6 +174,7 @@ def _scrape_one_portal(context, portal: dict) -> list[dict]:
                             "close_date": "",
                             "url": _make_absolute(url, href),
                             "description": text,
+                            "amount": "",
                         })
                 break
 
@@ -213,12 +214,23 @@ def _scrape_one_portal(context, portal: dict) -> list[dict]:
                             agency = cell_text
                             break
 
-                    # Close date — look for date-like values
-                    close_date = ""
+                    # Dates — collect all date-like cells; first is typically
+                    # posted/open date, second is close date
+                    date_cells = []
                     for i in range(2, len(cells)):
                         cell_text = cells[i].inner_text().strip()
                         if _looks_like_date(cell_text):
-                            close_date = cell_text
+                            date_cells.append(cell_text)
+
+                    posted_date = date_cells[0] if len(date_cells) > 1 else ""
+                    close_date = date_cells[-1] if date_cells else ""
+
+                    # Amount — look for dollar-like values
+                    amount = ""
+                    for i in range(2, len(cells)):
+                        cell_text = cells[i].inner_text().strip()
+                        if _looks_like_amount(cell_text):
+                            amount = cell_text
                             break
 
                     # Skip navigation cruft and header rows
@@ -233,10 +245,11 @@ def _scrape_one_portal(context, portal: dict) -> list[dict]:
                             "title": title,
                             "agency": agency,
                             "status": "Open",
-                            "posted_date": "",
+                            "posted_date": posted_date,
                             "close_date": close_date,
                             "url": _make_absolute(url, href) if href else "",
                             "description": title,
+                            "amount": amount,
                         })
                 except Exception:
                     continue
@@ -289,6 +302,13 @@ def _looks_like_date(text: str) -> bool:
     """Quick heuristic: does this string look like a date?"""
     import re
     return bool(re.search(r"\d{1,2}[/-]\d{1,2}[/-]\d{2,4}", text))
+
+
+def _looks_like_amount(text: str) -> bool:
+    """Quick heuristic: does this string look like a dollar amount?"""
+    import re
+    return bool(re.search(r"\$[\d,.]+", text) or
+                re.search(r"^[\d,.]+$", text.strip()) and len(text.strip()) > 3)
 
 
 def _make_absolute(base_url: str, href: str) -> str:

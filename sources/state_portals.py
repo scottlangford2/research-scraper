@@ -341,6 +341,7 @@ def _scrape_generic_portal(context, portal: dict) -> list[dict]:
                         "close_date": "",
                         "url": _make_absolute(url, href),
                         "description": text,
+                        "amount": "",
                     })
                 except Exception:
                     continue
@@ -377,6 +378,7 @@ def _scrape_generic_portal(context, portal: dict) -> list[dict]:
                         "close_date": "",
                         "url": _make_absolute(url, href) if href else "",
                         "description": title,
+                        "amount": "",
                     })
                 except Exception:
                     continue
@@ -435,11 +437,20 @@ def _extract_from_table_row(row, state: str, label: str, base_url: str) -> dict 
                 agency = ct
                 break
 
-    # Close date
-    close_date = ""
+    # Dates — collect all date-like cells; first is typically posted, last is close
+    date_cells = []
     for ct in cell_texts:
         if re.search(r"\d{1,2}[/-]\d{1,2}[/-]\d{2,4}", ct):
-            close_date = ct
+            date_cells.append(ct)
+
+    posted_date = date_cells[0] if len(date_cells) > 1 else ""
+    close_date = date_cells[-1] if date_cells else ""
+
+    # Amount — look for dollar-like values
+    amount = ""
+    for ct in cell_texts:
+        if re.search(r"\$[\d,.]+", ct):
+            amount = ct
             break
 
     return {
@@ -449,10 +460,11 @@ def _extract_from_table_row(row, state: str, label: str, base_url: str) -> dict 
         "title": title,
         "agency": agency,
         "status": "Open",
-        "posted_date": "",
+        "posted_date": posted_date,
         "close_date": close_date,
         "url": _make_absolute(base_url, href) if href else "",
         "description": title,
+        "amount": amount,
     }
 
 

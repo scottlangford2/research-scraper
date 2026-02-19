@@ -129,6 +129,7 @@ def _scrape_state(context, slug: str, abbrev: str) -> list[dict]:
                             "url": href if href.startswith("http")
                                    else f"https://www.demandstar.com{href}",
                             "description": text,
+                            "amount": "",
                         })
                 break
 
@@ -166,6 +167,15 @@ def _scrape_state(context, slug: str, abbrev: str) -> list[dict]:
                     )
                     posted_date = posted_el.inner_text().strip() if posted_el else ""
 
+                    amount_el = row.query_selector(
+                        "[class*='amount'], [class*='Amount'], "
+                        "[class*='value'], [class*='Value'], "
+                        "[class*='budget'], [class*='Budget'], "
+                        "[class*='price'], [class*='Price'], "
+                        "[class*='cost'], [class*='Cost']"
+                    )
+                    amount = amount_el.inner_text().strip() if amount_el else ""
+
                     parts = (href or "").rstrip("/").split("/")
                     sol_id = parts[-1] if parts else ""
 
@@ -183,6 +193,7 @@ def _scrape_state(context, slug: str, abbrev: str) -> list[dict]:
                                     else f"https://www.demandstar.com{href}"
                                     if href else ""),
                             "description": title,
+                            "amount": amount,
                         })
                 except Exception:
                     continue

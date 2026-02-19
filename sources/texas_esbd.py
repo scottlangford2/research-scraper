@@ -67,6 +67,16 @@ def scrape_texas_esbd() -> list[dict]:
 
                 close_str = f"{due_date} {due_time}".strip() if due_date else ""
 
+                # Try to extract estimated amount
+                amount = (
+                    _esbd_field(row, "Estimated Amount") or
+                    _esbd_field(row, "Estimated Value") or
+                    _esbd_field(row, "Amount") or
+                    _esbd_field(row, "Value") or
+                    _esbd_field(row, "Budget") or
+                    ""
+                )
+
                 rfps.append({
                     "state": "TX",
                     "source": "TX ESBD",
@@ -78,6 +88,7 @@ def scrape_texas_esbd() -> list[dict]:
                     "close_date": close_str,
                     "url": f"https://www.txsmartbuy.gov{href}" if href else "",
                     "description": "",
+                    "amount": amount,
                 })
 
             log.info(f"  Page {page}: {len(rows)} results")

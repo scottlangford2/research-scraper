@@ -66,6 +66,14 @@ def _scrape_nc_evp_playwright() -> list[dict]:
 
                     # Columns: 0=Sol Number, 1=Title, 2=Description,
                     #          3=Opening Date, 4=Posted Date, 5=Status, 6=Department
+                    # Check for amount in extra columns (index 7+)
+                    amount = ""
+                    for i in range(7, len(cell_texts)):
+                        val = cell_texts[i]
+                        if val and ("$" in val or val.replace(",", "").replace(".", "").isdigit()):
+                            amount = val
+                            break
+
                     rfps.append({
                         "state": "NC",
                         "source": "NC eVP",
@@ -78,6 +86,7 @@ def _scrape_nc_evp_playwright() -> list[dict]:
                         "url": (f"https://evp.nc.gov{href}" if href and href.startswith("/")
                                 else (href or "")),
                         "description": cell_texts[2] if len(cell_texts) > 2 else "",
+                        "amount": amount,
                     })
 
                 log.info(f"  NC eVP page {page_num}: {len(rows)} rows")
@@ -159,6 +168,7 @@ def _scrape_nc_evp_requests() -> list[dict]:
                             "close_date": "",
                             "url": href if href.startswith("http") else f"https://www.doa.nc.gov{href}",
                             "description": "",
+                            "amount": "",
                         })
     except requests.RequestException as e:
         log.warning(f"NC DOA fallback failed: {e}")

@@ -34,6 +34,10 @@ SOCRATA_DATASETS = [
         ],
         "agency_candidates": ["agency_name", "agency"],
         "end_date_candidates": ["expiration_date", "end_date"],
+        "amount_candidates": [
+            "total_contract_value", "contract_amount", "award_amount",
+            "total_amount", "amount", "value", "contract_value",
+        ],
     },
     {
         "state": "NY",
@@ -52,6 +56,10 @@ SOCRATA_DATASETS = [
         ],
         "agency_candidates": ["authority_name", "agency_name", "agency"],
         "end_date_candidates": ["end_date", "expiration_date"],
+        "amount_candidates": [
+            "contract_amount", "award_amount", "total_amount",
+            "amount", "value", "contract_value",
+        ],
     },
     {
         "state": "WA",
@@ -71,6 +79,10 @@ SOCRATA_DATASETS = [
         ],
         "agency_candidates": ["agency_number_agency_name", "agency_name", "agency"],
         "end_date_candidates": ["end_date", "expiration_date"],
+        "amount_candidates": [
+            "contract_amount", "award_amount", "total_amount",
+            "amount", "value", "original_contract_value",
+        ],
     },
     {
         "state": "MD",
@@ -87,6 +99,10 @@ SOCRATA_DATASETS = [
         ],
         "agency_candidates": ["organization_name", "agency_name", "agency"],
         "end_date_candidates": ["end_date", "expiration_date"],
+        "amount_candidates": [
+            "contract_amount", "award_amount", "total_amount",
+            "amount", "value",
+        ],
     },
     # NOTE: OK, VA, CA removed — no usable Socrata procurement datasets found.
 ]
@@ -152,6 +168,7 @@ def _scrape_one_dataset(ds: dict) -> list[dict]:
                 "close_date": _first_match(item, ds["end_date_candidates"]),
                 "url": "",
                 "description": title[:1000],
+                "amount": _first_match(item, ds.get("amount_candidates", [])),
             })
 
     except requests.RequestException as e:

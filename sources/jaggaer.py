@@ -157,6 +157,7 @@ def _scrape_one_portal(context, portal: dict) -> list[dict]:
                             "url": href if href.startswith("http")
                                    else f"{url.split('/apps')[0]}{href}",
                             "description": text,
+                            "amount": "",
                         })
                 break
 
@@ -189,12 +190,22 @@ def _scrape_one_portal(context, portal: dict) -> list[dict]:
                             agency = ct
                             break
 
-                    # Close date
-                    close_date = ""
+                    # Dates — collect all date-like cells
+                    date_cells = []
                     for i in range(2, len(cells)):
                         ct = cells[i].inner_text().strip()
                         if _looks_like_date(ct):
-                            close_date = ct
+                            date_cells.append(ct)
+
+                    posted_date = date_cells[0] if len(date_cells) > 1 else ""
+                    close_date = date_cells[-1] if date_cells else ""
+
+                    # Amount — look for dollar-like values
+                    amount = ""
+                    for i in range(2, len(cells)):
+                        ct = cells[i].inner_text().strip()
+                        if _looks_like_amount(ct):
+                            amount = ct
                             break
 
                     if title:
@@ -205,11 +216,12 @@ def _scrape_one_portal(context, portal: dict) -> list[dict]:
                             "title": title,
                             "agency": agency,
                             "status": "Open",
-                            "posted_date": "",
+                            "posted_date": posted_date,
                             "close_date": close_date,
                             "url": href if href and href.startswith("http")
                                    else "",
                             "description": title,
+                            "amount": amount,
                         })
                 except Exception:
                     continue
@@ -260,3 +272,8 @@ def _extract_event_id(href: str) -> str:
 
 def _looks_like_date(text: str) -> bool:
     return bool(re.search(r"\d{1,2}[/-]\d{1,2}[/-]\d{2,4}", text))
+
+
+def _looks_like_amount(text: str) -> bool:
+    return bool(re.search(r"\$[\d,.]+", text) or
+                re.search(r"^[\d,.]+$", text.strip()) and len(text.strip()) > 3)

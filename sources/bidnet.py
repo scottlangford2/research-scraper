@@ -162,6 +162,7 @@ def _scrape_bidnet_state(context, slug: str, abbrev: str) -> list[dict]:
                             "url": href if href.startswith("http")
                                    else f"https://www.bidnetdirect.com{href}",
                             "description": text,
+                            "amount": "",
                         })
                 break
 
@@ -191,6 +192,11 @@ def _scrape_bidnet_state(context, slug: str, abbrev: str) -> list[dict]:
                     )
                     posted_date = posted_el.inner_text().strip() if posted_el else ""
 
+                    amount_el = row.query_selector(
+                        ".amount, .value, .budget, .estimate, .price, .cost"
+                    )
+                    amount = amount_el.inner_text().strip() if amount_el else ""
+
                     parts = (href or "").rstrip("/").split("/")
                     sol_id = parts[-1] if parts else ""
 
@@ -207,6 +213,7 @@ def _scrape_bidnet_state(context, slug: str, abbrev: str) -> list[dict]:
                             "url": (href if href and href.startswith("http")
                                     else f"https://www.bidnetdirect.com{href}" if href else ""),
                             "description": title,
+                            "amount": amount,
                         })
                 except Exception:
                     continue
