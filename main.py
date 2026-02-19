@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """
-Research RFP Scraper — Phase 1: Federal Sources
+Research RFP Scraper
 
-Scrapes SAM.gov and Grants.gov, classifies by research keywords,
-and stores all results in a Parquet dataset for analysis.
+Scrapes federal sources (SAM.gov, Grants.gov), aggregators (BidNet, Socrata),
+and all 50 state procurement portals. Classifies by research keywords,
+extracts key terms, and stores results in a Parquet dataset.
 
 Author: Dr. W. Scott Langford / Lookout Analytics
 """
@@ -12,13 +13,16 @@ from datetime import datetime
 
 from config import log
 from filters import classify_rfp
+from keywords import extract_key_terms
 from storage import rfp_hash, load_seen, save_seen, prune_seen, append_rfps
+from analyze_keywords import run_analysis
+from generate_site import generate_site
 from sources import ALL_SOURCES
 
 
 def main():
     log.info("=" * 60)
-    log.info("Research scraper starting (Phase 1: Federal)")
+    log.info("Research scraper starting")
     log.info("=" * 60)
 
     # --- Scrape all sources ---
@@ -54,8 +58,11 @@ def main():
             "state": rfp.get("state", ""),
         }
 
-        # --- Classify ---
+        # --- Classify (deductive) ---
         match, keywords = classify_rfp(rfp)
+
+        # --- Extract key terms (inductive) ---
+        key_terms = extract_key_terms(rfp)
 
         new_rfps.append({
             "rfp_id": rfp.get("id", ""),
@@ -71,6 +78,7 @@ def main():
             "description": rfp.get("description", ""),
             "keyword_match": match,
             "matched_keywords": ", ".join(keywords),
+            "key_terms": ", ".join(key_terms),
             "scrape_date": scrape_date,
             "scrape_timestamp": now,
         })
@@ -83,6 +91,23 @@ def main():
     matched = sum(1 for r in new_rfps if r["keyword_match"])
     log.info(f"New RFPs: {written} ({matched} keyword matches, "
              f"{written - matched} unmatched)")
+
+    # --- Corpus-level keyword analysis ---
+    log.info("Running corpus-level keyword analysis...")
+    try:
+        summary = run_analysis()
+        log.info(summary)
+    except Exception as e:
+        log.error(f"Keyword analysis failed: {e}")
+
+    # --- Generate summary dashboard ---
+    log.info("Generating summary dashboard...")
+    try:
+        site_summary = generate_site()
+        log.info(site_summary)
+    except Exception as e:
+        log.error(f"Site generation failed: {e}")
+
     log.info("Research scraper finished.")
 
 

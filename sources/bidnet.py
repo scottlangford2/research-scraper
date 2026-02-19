@@ -117,7 +117,8 @@ def _scrape_bidnet_state(context, slug: str, abbrev: str) -> list[dict]:
 
     try:
         url = f"https://www.bidnetdirect.com/{slug}/solicitations/open-bids"
-        page.goto(url, timeout=PLAYWRIGHT_TIMEOUT)
+        page.goto(url, timeout=PLAYWRIGHT_TIMEOUT,
+                  wait_until="domcontentloaded")
 
         # Wait for content to load
         try:
@@ -217,19 +218,23 @@ def _scrape_bidnet_state(context, slug: str, abbrev: str) -> list[dict]:
             )
 
             if next_btn:
-                next_btn.click()
-                time.sleep(3)
+                try:
+                    # Use no_wait_after to prevent hanging on navigation
+                    next_btn.click(timeout=10000, no_wait_after=True)
+                    time.sleep(4)
 
-                for _ in range(10):
-                    new_rows = (
-                        page.query_selector_all(".bid-card, .solicitation-card") or
-                        page.query_selector_all("table tbody tr")
-                    )
-                    if new_rows:
-                        break
-                    time.sleep(1)
+                    for _ in range(10):
+                        new_rows = (
+                            page.query_selector_all(".bid-card, .solicitation-card") or
+                            page.query_selector_all("table tbody tr")
+                        )
+                        if new_rows:
+                            break
+                        time.sleep(1)
 
-                page_num += 1
+                    page_num += 1
+                except Exception:
+                    break
             else:
                 break
 

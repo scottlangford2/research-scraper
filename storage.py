@@ -29,6 +29,7 @@ RFP_SCHEMA = pa.schema([
     ("description", pa.string()),
     ("keyword_match", pa.bool_()),
     ("matched_keywords", pa.string()),
+    ("key_terms", pa.string()),
     ("scrape_date", pa.string()),
     ("scrape_timestamp", pa.timestamp("us")),
 ])

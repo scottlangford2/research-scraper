@@ -42,11 +42,14 @@ SAM_LOOKBACK_DAYS = 30
 GRANTS_ROWS_PER_QUERY = 100
 SOCRATA_LOOKBACK_DAYS = 30
 ESBD_MAX_PAGES = 20
-BIDNET_MAX_PAGES_PER_STATE = 5
+BIDNET_MAX_PAGES_PER_STATE = 8  # increased from 5 to capture more local listings
 NC_EVP_MAX_PAGES = 30
 REQUEST_TIMEOUT = 30
 POLITE_DELAY = 1  # seconds between paginated requests
 PLAYWRIGHT_TIMEOUT = 60000  # ms
+
+# Local aggregator limits
+DEMANDSTAR_MAX_PAGES = 5
 
 # ---------------------------------------------------------------------------
 # Logging
