@@ -18,91 +18,66 @@ from config import SOCRATA_LOOKBACK_DAYS, REQUEST_TIMEOUT, POLITE_DELAY, log
 
 SOCRATA_DATASETS = [
     {
+        # Actual columns: contract_or_po_2, end_date, pcc_code,
+        # po_contract_number, project_name, start_date, total_amount,
+        # vendor_name_description
         "state": "TX",
         "label": "Texas Open Data",
         "url": "https://data.texas.gov/resource/svjm-sdfz.json",
-        "date_candidates": [
-            "award_date", "effective_date", "start_date",
-            "contract_award_date", "date", "begin_date",
-        ],
-        "title_candidates": [
-            "contract_description", "description",
-            "commodity_description", "contract_name",
-        ],
-        "id_candidates": [
-            "contract_number", "purchase_order_number", "po_number",
-        ],
-        "agency_candidates": ["agency_name", "agency"],
-        "end_date_candidates": ["expiration_date", "end_date"],
-        "amount_candidates": [
-            "total_contract_value", "contract_amount", "award_amount",
-            "total_amount", "amount", "value", "contract_value",
-        ],
+        "date_candidates": ["start_date"],
+        "title_candidates": ["project_name"],
+        "id_candidates": ["po_contract_number"],
+        "agency_candidates": ["vendor_name_description"],
+        "end_date_candidates": ["end_date"],
+        "amount_candidates": ["total_amount"],
     },
     {
+        # Actual columns: amount_expended_for_fiscal_year,
+        # amount_expended_to_date, authority_name, award_date, award_process,
+        # begin_date, contract_amount, current_or_outstanding_balance,
+        # exempt_from_publishing, fiscal_year_end_date,
+        # number_of_bids_or_proposals_received, nys_or_foreign_business_enterprise,
+        # procurement_description, renewal_date, solicited_mwbe, status,
+        # type_of_procurement, vendor_*
         "state": "NY",
         "label": "New York Open Data",
         "url": "https://data.ny.gov/resource/ehig-g5x3.json",
-        "date_candidates": [
-            "award_date", "begin_date", "renewal_date",
-            "fiscal_year_end_date",
-        ],
-        "title_candidates": [
-            "procurement_description", "type_of_procurement",
-            "contract_description", "description",
-        ],
-        "id_candidates": [
-            "contract_number", "contract_id", "id",
-        ],
-        "agency_candidates": ["authority_name", "agency_name", "agency"],
-        "end_date_candidates": ["end_date", "expiration_date"],
-        "amount_candidates": [
-            "contract_amount", "award_amount", "total_amount",
-            "amount", "value", "contract_value",
-        ],
+        "date_candidates": ["award_date", "begin_date", "renewal_date"],
+        "title_candidates": ["procurement_description", "type_of_procurement"],
+        "id_candidates": [],  # No contract number in this dataset
+        "agency_candidates": ["authority_name"],
+        "end_date_candidates": ["fiscal_year_end_date"],
+        "amount_candidates": ["contract_amount", "amount_expended_to_date"],
     },
     {
+        # Actual columns: agency_contract_amendment, agency_contract_no,
+        # agency_number_agency_name, contract_effective_start,
+        # contractor_name_search_for, federal_amount, minority_woman_owned,
+        # other_amount, period_of_performance_start, procurement_type,
+        # purpose_of_the_contract, small_business, state_amount, veteran
         "state": "WA",
         "label": "Washington Open Data",
         "url": "https://data.wa.gov/resource/s8d5-pj78.json",
         "date_candidates": [
             "contract_effective_start", "period_of_performance_start",
-            "start_date", "effective_date",
         ],
-        "title_candidates": [
-            "purpose_of_the_contract", "contract_description",
-            "description", "title",
-        ],
-        "id_candidates": [
-            "agency_contract_no", "agency_contract_amendment",
-            "contract_number", "contract_id",
-        ],
-        "agency_candidates": ["agency_number_agency_name", "agency_name", "agency"],
-        "end_date_candidates": ["end_date", "expiration_date"],
-        "amount_candidates": [
-            "contract_amount", "award_amount", "total_amount",
-            "amount", "value", "original_contract_value",
-        ],
+        "title_candidates": ["purpose_of_the_contract", "procurement_type"],
+        "id_candidates": ["agency_contract_no", "agency_contract_amendment"],
+        "agency_candidates": ["agency_number_agency_name"],
+        "end_date_candidates": [],
+        "amount_candidates": ["state_amount", "federal_amount", "other_amount"],
     },
     {
+        # Actual columns: bid_number, organization_name, short_description
         "state": "MD",
         "label": "Maryland Open Data",
         "url": "https://opendata.maryland.gov/resource/3tu2-tyav.json",
-        "date_candidates": [
-            "date", "start_date", "award_date",
-        ],
-        "title_candidates": [
-            "short_description", "description", "title",
-        ],
-        "id_candidates": [
-            "bid_number", "contract_id", "id",
-        ],
-        "agency_candidates": ["organization_name", "agency_name", "agency"],
-        "end_date_candidates": ["end_date", "expiration_date"],
-        "amount_candidates": [
-            "contract_amount", "award_amount", "total_amount",
-            "amount", "value",
-        ],
+        "date_candidates": [],  # No date columns in this dataset
+        "title_candidates": ["short_description"],
+        "id_candidates": ["bid_number"],
+        "agency_candidates": ["organization_name"],
+        "end_date_candidates": [],
+        "amount_candidates": [],  # No amount columns
     },
     # NOTE: OK, VA, CA removed — no usable Socrata procurement datasets found.
 ]
