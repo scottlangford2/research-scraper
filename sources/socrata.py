@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 
 import requests
 
-from config import SOCRATA_LOOKBACK_DAYS, REQUEST_TIMEOUT, POLITE_DELAY, log
+from config import SOCRATA_LOOKBACK_DAYS, HISTORICAL_MODE, REQUEST_TIMEOUT, POLITE_DELAY, log
 
 # ---------------------------------------------------------------------------
 # State dataset configurations
@@ -117,34 +117,48 @@ def _scrape_one_dataset(ds: dict) -> list[dict]:
                 date_col = candidate
                 break
 
-        # Build query
-        cutoff = (datetime.now() - timedelta(days=SOCRATA_LOOKBACK_DAYS)).strftime(
-            "%Y-%m-%dT00:00:00"
-        )
-        params: dict = {"$limit": 1000}
-        if date_col:
-            params["$where"] = f"{date_col} >= '{cutoff}'"
-            params["$order"] = f"{date_col} DESC"
+        # Build query — paginate to get all records
+        page_limit = 50000 if HISTORICAL_MODE else 1000
+        offset = 0
 
-        resp = requests.get(url, params=params, timeout=REQUEST_TIMEOUT)
-        resp.raise_for_status()
-        data = resp.json()
+        while True:
+            params: dict = {"$limit": page_limit, "$offset": offset}
+            if SOCRATA_LOOKBACK_DAYS > 0 and date_col:
+                cutoff = (datetime.now() - timedelta(days=SOCRATA_LOOKBACK_DAYS)).strftime(
+                    "%Y-%m-%dT00:00:00"
+                )
+                params["$where"] = f"{date_col} >= '{cutoff}'"
+            if date_col:
+                params["$order"] = f"{date_col} DESC"
 
-        for item in data:
-            title = _first_match(item, ds["title_candidates"])
-            rfps.append({
-                "state": state,
-                "source": f"{label} (Awarded)",
-                "id": _first_match(item, ds["id_candidates"]),
-                "title": title,
-                "agency": _first_match(item, ds["agency_candidates"]),
-                "status": "Awarded",
-                "posted_date": item.get(date_col, "") if date_col else "",
-                "close_date": _first_match(item, ds["end_date_candidates"]),
-                "url": "",
-                "description": title[:1000],
-                "amount": _first_match(item, ds.get("amount_candidates", [])),
-            })
+            resp = requests.get(url, params=params, timeout=REQUEST_TIMEOUT)
+            resp.raise_for_status()
+            data = resp.json()
+
+            if not data:
+                break
+
+            for item in data:
+                title = _first_match(item, ds["title_candidates"])
+                rfps.append({
+                    "state": state,
+                    "source": f"{label} (Awarded)",
+                    "id": _first_match(item, ds["id_candidates"]),
+                    "title": title,
+                    "agency": _first_match(item, ds["agency_candidates"]),
+                    "status": "Awarded",
+                    "posted_date": item.get(date_col, "") if date_col else "",
+                    "close_date": _first_match(item, ds["end_date_candidates"]),
+                    "url": "",
+                    "description": title[:1000],
+                    "amount": _first_match(item, ds.get("amount_candidates", [])),
+                })
+
+            if len(data) < page_limit:
+                break  # last page
+            offset += page_limit
+            log.info(f"    {label}: fetched {len(rfps)} records so far...")
+            time.sleep(POLITE_DELAY)
 
     except requests.RequestException as e:
         log.error(f"  {label} query failed: {e}")

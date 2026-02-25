@@ -35,12 +35,19 @@ load_dotenv(_env_path)
 SAM_GOV_API_KEY = os.getenv("SAM_GOV_API_KEY", "")
 
 # ---------------------------------------------------------------------------
+# Historical mode — set HISTORICAL_MODE=true env var for one-time backfill
+# ---------------------------------------------------------------------------
+
+HISTORICAL_MODE = os.getenv("HISTORICAL_MODE", "").lower() == "true"
+
+# ---------------------------------------------------------------------------
 # Scraping constants
 # ---------------------------------------------------------------------------
 
-SAM_LOOKBACK_DAYS = 30
-GRANTS_ROWS_PER_QUERY = 100
-SOCRATA_LOOKBACK_DAYS = 30
+SAM_LOOKBACK_DAYS = 3650 if HISTORICAL_MODE else 30       # 10 years vs 30 days
+SAM_CHUNK_DAYS = 90                                        # chunk size for historical
+GRANTS_ROWS_PER_QUERY = 1000 if HISTORICAL_MODE else 100
+SOCRATA_LOOKBACK_DAYS = 0 if HISTORICAL_MODE else 30       # 0 = no date filter
 ESBD_MAX_PAGES = 20
 BIDNET_MAX_PAGES_PER_STATE = 8  # increased from 5 to capture more local listings
 NC_EVP_MAX_PAGES = 30

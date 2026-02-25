@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from config import PARQUET_FILE, SEEN_FILE, DATA_DIR, log
+from config import PARQUET_FILE, SEEN_FILE, DATA_DIR, HISTORICAL_MODE, log
 
 # ---------------------------------------------------------------------------
 # Parquet schema
@@ -50,7 +50,7 @@ def rfp_hash(rfp: dict) -> str:
 # Seen-hash tracking (dedup across runs)
 # ---------------------------------------------------------------------------
 
-SEEN_TTL_DAYS = 90
+SEEN_TTL_DAYS = 36500 if HISTORICAL_MODE else 90
 
 
 def load_seen() -> dict:
@@ -96,7 +96,7 @@ def append_rfps(rows: list[dict]) -> int:
     pq.write_table(combined, PARQUET_FILE, compression="snappy")
 
     size_mb = PARQUET_FILE.stat().st_size / (1024 * 1024)
-    if size_mb > 50:
+    if size_mb > 500:
         log.warning(f"Parquet file is {size_mb:.1f} MB — consider partitioning")
 
     log.info(f"Wrote {len(rows)} new rows to {PARQUET_FILE.name} ({size_mb:.1f} MB total)")
