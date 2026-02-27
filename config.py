@@ -34,6 +34,14 @@ load_dotenv(_env_path)
 
 SAM_GOV_API_KEY = os.getenv("SAM_GOV_API_KEY", "")
 
+# SMTP / Email
+SMTP_HOST = os.getenv("SMTP_HOST", "")
+SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
+SMTP_USER = os.getenv("SMTP_USER", "")
+SMTP_PASS = os.getenv("SMTP_PASS", "")
+EMAIL_FROM = os.getenv("EMAIL_FROM", "") or SMTP_USER
+EMAIL_TO = os.getenv("EMAIL_TO", "")
+
 # ---------------------------------------------------------------------------
 # Historical mode — set HISTORICAL_MODE=true env var for one-time backfill
 # ---------------------------------------------------------------------------
@@ -48,6 +56,11 @@ SAM_LOOKBACK_DAYS = 3650 if HISTORICAL_MODE else 30       # 10 years vs 30 days
 SAM_CHUNK_DAYS = 90                                        # chunk size for historical
 GRANTS_ROWS_PER_QUERY = 1000 if HISTORICAL_MODE else 100
 SOCRATA_LOOKBACK_DAYS = 0 if HISTORICAL_MODE else 30       # 0 = no date filter
+SBIR_MAX_PAGES = 10                                    # 500 max solicitations
+NSF_LOOKBACK_DAYS = 30
+FED_REGISTER_LOOKBACK_DAYS = 14
+USASPENDING_LOOKBACK_DAYS = 14
+NY_NYSCR_MAX_PAGES = 3
 ESBD_MAX_PAGES = 20
 BIDNET_MAX_PAGES_PER_STATE = 8  # increased from 5 to capture more local listings
 NC_EVP_MAX_PAGES = 30

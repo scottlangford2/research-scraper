@@ -2,13 +2,20 @@
 """
 Research RFP Scraper
 
-Scrapes federal sources (SAM.gov, Grants.gov), aggregators (BidNet, Socrata),
-and all 50 state procurement portals. Classifies by research keywords,
-extracts key terms, and stores results in a Parquet dataset.
+Scrapes federal sources (SAM.gov, Grants.gov, SBIR, NIH, NSF, Federal Register,
+USAspending, ProPublica), aggregators (BidNet, Socrata, DemandStar), and all 50
+state procurement portals. Classifies by research keywords, extracts key terms,
+and stores results in a Parquet dataset.
+
+Modes:
+  main.py                 — scrape + dashboard + git push  (schedule: 12:01 AM)
+  main.py --daily-email   — send daily digest email        (schedule: 6:00 AM)
+  main.py --team-digest   — send weekly team emails        (schedule: Mon 6:00 AM)
 
 Author: Dr. W. Scott Langford / Lookout Analytics
 """
 
+import argparse
 import subprocess
 from datetime import datetime
 from pathlib import Path
@@ -22,7 +29,8 @@ from generate_site import generate_site
 from sources import ALL_SOURCES
 
 
-def main():
+def scrape():
+    """Run the full scrape pipeline."""
     log.info("=" * 60)
     log.info("Research scraper starting")
     log.info("=" * 60)
@@ -47,7 +55,6 @@ def main():
     new_rfps: list[dict] = []
     now = datetime.now()
     scrape_date = now.strftime("%Y-%m-%d")
-    scrape_ts = now.isoformat()
 
     for rfp in all_rfps:
         h = rfp_hash(rfp)
@@ -140,6 +147,32 @@ def main():
         log.error(f"Git push failed: {e}")
 
     log.info("Research scraper finished.")
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Research RFP Scraper")
+    parser.add_argument(
+        "--daily-email", action="store_true",
+        help="Send the daily digest email (reads today's matches from Parquet)",
+    )
+    parser.add_argument(
+        "--team-digest", action="store_true",
+        help="Send personalized weekly digest to each team member",
+    )
+    args = parser.parse_args()
+
+    if args.daily_email or args.team_digest:
+        from email_digest import send_daily_email, send_team_digest
+
+        if args.daily_email:
+            log.info("Sending daily digest email...")
+            send_daily_email()
+
+        if args.team_digest:
+            log.info("Sending weekly team digest emails...")
+            send_team_digest()
+    else:
+        scrape()
 
 
 if __name__ == "__main__":
