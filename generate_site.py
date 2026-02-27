@@ -150,10 +150,51 @@ def build_summary_data() -> dict:
             "posted_date": str(row.get("posted_date", "") or ""),
             "close_date": str(row.get("close_date", "") or ""),
             "amount": str(row.get("amount", "") or ""),
+            "recipient": str(row.get("recipient", "") or ""),
+            "recipient_state": str(row.get("recipient_state", "") or ""),
+            "pi_name": str(row.get("pi_name", "") or ""),
             "keyword_match": bool(row.get("keyword_match", False)),
         }
         for _, row in full_df.iterrows()
     ]
+
+    # --- Top recipients (organizations receiving the most awards) ---
+    if "recipient" in df.columns:
+        recip_df = df[df["recipient"].notna() & (df["recipient"] != "")]
+        if not recip_df.empty:
+            # Parse amounts to float for summing
+            def parse_amount(val):
+                try:
+                    return float(str(val).replace(",", "").replace("$", ""))
+                except (ValueError, TypeError):
+                    return 0.0
+
+            recip_stats = (
+                recip_df.groupby("recipient")
+                .agg(
+                    count=("recipient", "size"),
+                    total_amount=("amount", lambda x: sum(parse_amount(v) for v in x)),
+                    location=("recipient_state", "first"),
+                    pi_names=("pi_name", lambda x: "; ".join(
+                        sorted(set(str(v) for v in x if v and str(v).strip()))[:3]
+                    )),
+                )
+                .sort_values("count", ascending=False)
+            )
+            summary["top_recipients"] = [
+                {
+                    "name": str(name)[:80],
+                    "count": int(row["count"]),
+                    "total_amount": float(row["total_amount"]),
+                    "location": str(row["location"] or ""),
+                    "pi_names": str(row["pi_names"] or ""),
+                }
+                for name, row in recip_stats.head(30).iterrows()
+            ]
+        else:
+            summary["top_recipients"] = []
+    else:
+        summary["top_recipients"] = []
 
     # --- Daily counts time series ---
     if "scrape_date" in df.columns:
@@ -336,6 +377,31 @@ def _build_html(json_blob: str) -> str:
         </div>
     </section>
 
+    <!-- Top Recipients -->
+    <section>
+        <h2 class="section-title">Top Funding Recipients</h2>
+        <div style="margin-bottom:0.75rem; display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
+            <input type="text" id="recip-search" placeholder="Search recipients..."
+                   style="padding:0.4rem 0.75rem; border:1px solid var(--gray-300); border-radius:6px;
+                          font-size:0.85rem; width:250px;">
+            <span id="recip-count" style="font-size:0.8rem; color:var(--gray-500); margin-left:auto;"></span>
+        </div>
+        <div class="table-wrap" style="max-height: 500px; overflow-y: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Recipient</th>
+                        <th>Location</th>
+                        <th>Awards</th>
+                        <th>Total Amount</th>
+                        <th>PI(s)</th>
+                    </tr>
+                </thead>
+                <tbody id="recip-body"></tbody>
+            </table>
+        </div>
+    </section>
+
     <!-- Keyword Analysis -->
     <section>
         <h2 class="section-title">Keyword Analysis</h2>
@@ -398,6 +464,7 @@ def _build_html(json_blob: str) -> str:
                         <th>State</th>
                         <th>Title</th>
                         <th>Agency</th>
+                        <th>Recipient</th>
                         <th>Source</th>
                         <th>Open Date</th>
                         <th>Close Date</th>
@@ -439,6 +506,9 @@ document.addEventListener('DOMContentLoaded', () => {{
 
     // --- Line chart ---
     renderLineChart(d.daily_counts || [], 'cumulative');
+
+    // --- Top Recipients ---
+    initRecipients(d.top_recipients || []);
 
     // --- Full database ---
     initFullDatabase(d.full_database || []);
@@ -808,6 +878,51 @@ document.querySelectorAll('.chart-btn').forEach(btn => {{
     }});
 }});
 
+// --- Top Recipients table with search ---
+function initRecipients(allRecipients) {{
+    const body = document.getElementById('recip-body');
+    const countEl = document.getElementById('recip-count');
+    const searchInput = document.getElementById('recip-search');
+    if (!body || allRecipients.length === 0) {{
+        if (countEl) countEl.textContent = 'No recipient data yet (populates after next scrape)';
+        return;
+    }}
+
+    function fmtAmount(val) {{
+        if (!val || val === 0) return '\u2014';
+        if (val >= 1e9) return '$' + (val / 1e9).toFixed(1) + 'B';
+        if (val >= 1e6) return '$' + (val / 1e6).toFixed(1) + 'M';
+        if (val >= 1e3) return '$' + (val / 1e3).toFixed(0) + 'K';
+        return '$' + val.toLocaleString();
+    }}
+
+    function render(list) {{
+        body.innerHTML = '';
+        list.forEach(r => {{
+            const tr = document.createElement('tr');
+            tr.innerHTML =
+                '<td><strong>' + esc(r.name) + '</strong></td>' +
+                '<td>' + esc(r.location) + '</td>' +
+                '<td>' + num(r.count) + '</td>' +
+                '<td>' + fmtAmount(r.total_amount) + '</td>' +
+                '<td style="font-size:0.8rem;color:#555;">' + esc(r.pi_names) + '</td>';
+            body.appendChild(tr);
+        }});
+        countEl.textContent = num(list.length) + ' recipients';
+    }}
+
+    searchInput.addEventListener('input', () => {{
+        const q = searchInput.value.toLowerCase().trim();
+        if (!q) {{ render(allRecipients); return; }}
+        const filtered = allRecipients.filter(r =>
+            (r.name + ' ' + r.location + ' ' + r.pi_names).toLowerCase().includes(q)
+        );
+        render(filtered);
+    }});
+
+    render(allRecipients);
+}}
+
 // --- Full database with search, filters, and lazy loading ---
 function initFullDatabase(allRows) {{
     const PAGE_SIZE = 100;
@@ -847,7 +962,7 @@ function initFullDatabase(allRows) {{
             if (src && r.source !== src) return false;
             if (mo && !r.keyword_match) return false;
             if (q) {{
-                const hay = (r.title + ' ' + r.agency + ' ' + r.state + ' ' + r.source).toLowerCase();
+                const hay = (r.title + ' ' + r.agency + ' ' + r.state + ' ' + r.source + ' ' + (r.recipient || '')).toLowerCase();
                 if (!hay.includes(q)) return false;
             }}
             return true;
@@ -867,10 +982,14 @@ function initFullDatabase(allRows) {{
             const titleCell = r.url
                 ? '<a href="' + esc(r.url) + '" target="_blank" rel="noopener">' + esc(r.title) + '</a>'
                 : esc(r.title);
+            const recipCell = r.recipient
+                ? esc(r.recipient) + (r.recipient_state ? '<br><span style="color:#888;font-size:0.75rem">' + esc(r.recipient_state) + '</span>' : '')
+                : '';
             tr.innerHTML =
                 '<td><strong>' + esc(r.state) + '</strong></td>' +
                 '<td>' + titleCell + '</td>' +
                 '<td>' + esc(r.agency) + '</td>' +
+                '<td>' + recipCell + '</td>' +
                 '<td>' + esc(r.source) + '</td>' +
                 '<td>' + esc(r.posted_date) + '</td>' +
                 '<td>' + esc(r.close_date) + '</td>' +
