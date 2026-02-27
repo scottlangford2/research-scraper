@@ -273,6 +273,15 @@ def send_team_digest():
         log.warning("team_config.py not found. Skipping team digest.")
         return
 
+    # Sync keyword updates from Google Form responses
+    _get_patterns = None
+    try:
+        from keyword_updates import sync_form_responses, get_effective_patterns
+        sync_form_responses(TEAM_MEMBERS)
+        _get_patterns = get_effective_patterns
+    except ImportError:
+        pass
+
     smtp_cfg = _get_smtp_config()
     if not smtp_cfg:
         return
@@ -286,9 +295,10 @@ def send_team_digest():
     log.info(f"Sending team digest to {len(TEAM_MEMBERS)} members ({len(all_rfps)} matched RFPs)...")
 
     for member in TEAM_MEMBERS:
-        # Compile member's keyword pattern
+        # Compile member's keyword pattern (with form-submitted overrides)
+        patterns = _get_patterns(member) if _get_patterns else member["patterns"]
         pattern = re.compile(
-            "|".join(re.escape(p) for p in member["patterns"]),
+            "|".join(re.escape(p) for p in patterns),
             re.IGNORECASE,
         )
 
