@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.lookoutanalytics.researchscraper.monday</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Library/Frameworks/Python.framework/Versions/3.13/bin/python3</string>
+        <string>/Users/scottlangford/Library/CloudStorage/Dropbox/Lookout Analytics/research_scraper/main.py</string>
+        <string>--daily-email</string>
+        <string>--team-digest</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/scottlangford/Library/CloudStorage/Dropbox/Lookout Analytics/research_scraper</string>
+
+    <!-- Run every Monday at 6:00 AM CT -->
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Weekday</key>
+        <integer>1</integer>
+        <key>Hour</key>
+        <integer>6</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <false/>
+
+    <key>StandardOutPath</key>
+    <string>/Users/scottlangford/Library/CloudStorage/Dropbox/Lookout Analytics/research_scraper/logs/launchd_monday_stdout.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/scottlangford/Library/CloudStorage/Dropbox/Lookout Analytics/research_scraper/logs/launchd_monday_stderr.log</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/Library/Frameworks/Python.framework/Versions/3.13/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+    </dict>
+</dict>
+</plist>

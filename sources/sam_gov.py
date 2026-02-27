@@ -3,6 +3,9 @@ SAM.gov Federal Opportunities API scraper.
 
 Queries the SAM.gov Get Opportunities API for recent federal solicitations.
 Requires SAM_GOV_API_KEY in .env.
+
+API keys expire every 90 days. Regenerate at:
+  https://sam.gov → Account Details → Public API Key
 """
 
 import time
@@ -12,6 +15,12 @@ import requests
 
 from config import (SAM_GOV_API_KEY, SAM_LOOKBACK_DAYS, SAM_CHUNK_DAYS,
                     HISTORICAL_MODE, REQUEST_TIMEOUT, POLITE_DELAY, log)
+
+# SAM.gov has used multiple URL patterns; try both
+_API_URLS = [
+    "https://api.sam.gov/opportunities/v2/search",
+    "https://api.sam.gov/prod/opportunities/v2/search",
+]
 
 
 def _date_chunks(total_days: int, chunk_days: int) -> list[tuple[str, str]]:
@@ -27,12 +36,43 @@ def _date_chunks(total_days: int, chunk_days: int) -> list[tuple[str, str]]:
     return chunks
 
 
+def _find_working_url() -> str | None:
+    """Probe each candidate URL with a minimal query to find one that works."""
+    test_params = {
+        "api_key": SAM_GOV_API_KEY,
+        "postedFrom": (datetime.now() - timedelta(days=1)).strftime("%m/%d/%Y"),
+        "postedTo": datetime.now().strftime("%m/%d/%Y"),
+        "limit": 1,
+        "offset": 0,
+    }
+    for url in _API_URLS:
+        try:
+            resp = requests.get(url, params=test_params, timeout=30)
+            if resp.status_code == 200:
+                log.info(f"SAM.gov: using endpoint {url}")
+                return url
+            log.debug(f"SAM.gov: {url} returned {resp.status_code}")
+        except requests.RequestException:
+            continue
+    return None
+
+
 def scrape_sam_gov() -> list[dict]:
     if not SAM_GOV_API_KEY:
         log.warning("SAM_GOV_API_KEY not set — skipping SAM.gov")
         return []
 
     log.info("Querying SAM.gov Opportunities API...")
+
+    base_url = _find_working_url()
+    if not base_url:
+        log.error(
+            "SAM.gov: all API endpoints returned errors. "
+            "Your API key may have expired (keys expire every 90 days). "
+            "Regenerate at: https://sam.gov → Account Details → Public API Key"
+        )
+        return []
+
     rfps: list[dict] = []
 
     if HISTORICAL_MODE:
@@ -60,7 +100,7 @@ def scrape_sam_gov() -> list[dict]:
                     "offset": offset,
                 }
                 resp = requests.get(
-                    "https://api.sam.gov/prod/opportunities/v2/search",
+                    base_url,
                     params=params,
                     timeout=REQUEST_TIMEOUT,
                 )
