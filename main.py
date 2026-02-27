@@ -9,7 +9,9 @@ extracts key terms, and stores results in a Parquet dataset.
 Author: Dr. W. Scott Langford / Lookout Analytics
 """
 
+import subprocess
 from datetime import datetime
+from pathlib import Path
 
 from config import log
 from filters import classify_rfp
@@ -108,6 +110,34 @@ def main():
         log.info(site_summary)
     except Exception as e:
         log.error(f"Site generation failed: {e}")
+
+    # --- Push updated dashboard to GitHub Pages ---
+    log.info("Pushing dashboard to GitHub Pages...")
+    try:
+        repo_dir = Path(__file__).resolve().parent
+        subprocess.run(
+            ["git", "add", "docs/index.html"],
+            cwd=repo_dir, check=True, capture_output=True,
+        )
+        result = subprocess.run(
+            ["git", "diff", "--cached", "--quiet"],
+            cwd=repo_dir, capture_output=True,
+        )
+        if result.returncode != 0:  # there are staged changes
+            subprocess.run(
+                ["git", "commit", "-m",
+                 f"Daily dashboard update: {written} new RFPs ({scrape_date})"],
+                cwd=repo_dir, check=True, capture_output=True,
+            )
+            subprocess.run(
+                ["git", "push"],
+                cwd=repo_dir, check=True, capture_output=True,
+            )
+            log.info("Dashboard pushed to GitHub Pages.")
+        else:
+            log.info("No dashboard changes to push.")
+    except Exception as e:
+        log.error(f"Git push failed: {e}")
 
     log.info("Research scraper finished.")
 
