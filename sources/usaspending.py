@@ -41,6 +41,8 @@ def scrape_usaspending() -> list[dict]:
                         "Award ID", "Recipient Name", "Description",
                         "Start Date", "End Date", "Award Amount",
                         "Awarding Agency", "generated_internal_id",
+                        "recipient_id",
+                        "Recipient State Code", "Recipient City Name",
                     ],
                     "limit": 100,
                     "page": 1,
@@ -58,6 +60,10 @@ def scrape_usaspending() -> list[dict]:
                 amount = str(result.get("Award Amount", "")) if result.get("Award Amount") else ""
                 internal_id = result.get("generated_internal_id", "")
 
+                recip_city = result.get("Recipient City Name", "")
+                recip_state = result.get("Recipient State Code", "")
+                recip_loc = f"{recip_city}, {recip_state}" if recip_city else recip_state
+
                 rfps.append({
                     "state": "Federal",
                     "source": f"USAspending ({label})",
@@ -70,6 +76,9 @@ def scrape_usaspending() -> list[dict]:
                     "url": f"https://www.usaspending.gov/award/{internal_id}" if internal_id else "",
                     "description": (result.get("Description", "") or "")[:500],
                     "amount": amount,
+                    "recipient": result.get("Recipient Name", ""),
+                    "recipient_state": recip_loc,
+                    "pi_name": "",
                 })
 
             time.sleep(POLITE_DELAY)

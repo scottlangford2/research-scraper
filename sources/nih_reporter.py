@@ -63,6 +63,31 @@ def scrape_nih_reporter() -> list[dict]:
                 if fundings and isinstance(fundings, list):
                     agency_abbr = fundings[0].get("abbreviation", "NIH")
 
+                # PI name(s)
+                pi_names = []
+                for pi in (proj.get("principal_investigators") or []):
+                    name = pi.get("full_name") or ""
+                    if not name:
+                        first = pi.get("first_name", "")
+                        last = pi.get("last_name", "")
+                        name = f"{first} {last}".strip()
+                    if name:
+                        pi_names.append(name)
+                pi_name = "; ".join(pi_names[:3])  # cap at 3
+
+                # Organization / institution
+                org = proj.get("organization") or {}
+                org_name = org.get("org_name", "")
+                org_city = org.get("org_city", "")
+                org_state = org.get("org_state", "")
+                org_loc = f"{org_city}, {org_state}" if org_city else org_state
+
+                # Award amount
+                award_amount = ""
+                total_cost = proj.get("award_amount") or proj.get("total_cost")
+                if total_cost:
+                    award_amount = str(total_cost)
+
                 rfps.append({
                     "state": "Federal",
                     "source": "NIH RePORTER",
@@ -74,7 +99,10 @@ def scrape_nih_reporter() -> list[dict]:
                     "close_date": proj.get("project_end_date", ""),
                     "url": f"https://reporter.nih.gov/project-details/{proj_num}" if proj_num else "",
                     "description": (proj.get("abstract_text", "") or "")[:500],
-                    "amount": "",
+                    "amount": award_amount,
+                    "recipient": org_name,
+                    "recipient_state": org_loc,
+                    "pi_name": pi_name,
                 })
 
             time.sleep(POLITE_DELAY)

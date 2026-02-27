@@ -35,7 +35,7 @@ def scrape_nsf_awards() -> list[dict]:
                 params={
                     "keyword": kw,
                     "dateStart": cutoff,
-                    "printFields": "id,title,agency,startDate,expDate,estimatedTotalAmt,abstractText,piFirstName,piLastName,awardeeCity,awardeeStateCode",
+                    "printFields": "id,title,agency,startDate,expDate,estimatedTotalAmt,abstractText,piFirstName,piLastName,awardeeName,awardeeCity,awardeeStateCode",
                     "offset": 1,
                     "rpp": 100,
                 },
@@ -52,6 +52,15 @@ def scrape_nsf_awards() -> list[dict]:
 
                 amount = str(award.get("estimatedTotalAmt", "")) if award.get("estimatedTotalAmt") else ""
 
+                # PI name
+                pi_first = award.get("piFirstName", "")
+                pi_last = award.get("piLastName", "")
+                pi_name = f"{pi_first} {pi_last}".strip() if (pi_first or pi_last) else ""
+
+                # Awardee location
+                awardee_city = award.get("awardeeCity", "")
+                awardee_state = award.get("awardeeStateCode", "")
+
                 rfps.append({
                     "state": "Federal",
                     "source": "NSF Awards",
@@ -64,6 +73,9 @@ def scrape_nsf_awards() -> list[dict]:
                     "url": f"https://www.nsf.gov/awardsearch/showAward?AWD_ID={award_id}" if award_id else "",
                     "description": (award.get("abstractText", "") or "")[:500],
                     "amount": amount,
+                    "recipient": award.get("awardeeName", ""),
+                    "recipient_state": f"{awardee_city}, {awardee_state}" if awardee_city else awardee_state,
+                    "pi_name": pi_name,
                 })
 
             time.sleep(POLITE_DELAY)

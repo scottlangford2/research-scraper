@@ -128,6 +128,9 @@ TEAM_MEMBERS = [
 | `posted_date` / `close_date` | Posting and deadline dates |
 | `url` | Link to full listing |
 | `amount` | Dollar value (when available) |
+| `recipient` | Award recipient organization (NIH, NSF, USAspending) |
+| `recipient_state` | Recipient city/state (e.g., "Austin, TX") |
+| `pi_name` | Principal investigator name(s) (NIH, NSF) |
 | `keyword_match` | Boolean: matches research keywords |
 | `matched_keywords` | Which keywords matched |
 | `key_terms` | NLP-extracted salient terms |

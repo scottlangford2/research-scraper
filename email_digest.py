@@ -94,18 +94,36 @@ def _build_tables_html(rfps: list[dict]) -> str:
             "<table border='1' cellpadding='6' cellspacing='0' "
             "style='border-collapse:collapse; font-size:13px;'>"
         )
+        # Show Recipient/PI columns only if any row in the group has data
+        has_recipient = any(r.get("recipient") for r in group)
+        has_pi = any(r.get("pi_name") for r in group)
+
+        header_cols = "<th>ID</th><th>Title</th><th>Agency</th>"
+        if has_recipient:
+            header_cols += "<th>Recipient</th>"
+        if has_pi:
+            header_cols += "<th>PI</th>"
+        header_cols += "<th>Status</th><th>Posted</th><th>Closes</th><th>Link</th>"
         parts.append(
-            "<tr style='background:#f0f0f0;'>"
-            "<th>ID</th><th>Title</th><th>Agency</th>"
-            "<th>Status</th><th>Posted</th><th>Closes</th><th>Link</th></tr>"
+            f"<tr style='background:#f0f0f0;'>{header_cols}</tr>"
         )
         for r in group:
             link = f"<a href='{r['url']}'>View</a>" if r.get("url") else "\u2014"
+            recip_cell = ""
+            if has_recipient:
+                recip = r.get("recipient", "")
+                recip_loc = r.get("recipient_state", "")
+                recip_display = f"{recip}<br><span style='color:#888;font-size:11px;'>{recip_loc}</span>" if recip and recip_loc else (recip or "\u2014")
+                recip_cell = f"<td>{recip_display}</td>"
+            pi_cell = ""
+            if has_pi:
+                pi_cell = f"<td>{r.get('pi_name', '') or '\u2014'}</td>"
             parts.append(
                 f"<tr>"
                 f"<td>{r.get('rfp_id', '\u2014')}</td>"
                 f"<td>{r.get('title', '\u2014')}</td>"
                 f"<td>{r.get('agency', '\u2014')}</td>"
+                f"{recip_cell}{pi_cell}"
                 f"<td>{r.get('status', '\u2014')}</td>"
                 f"<td>{r.get('posted_date', '\u2014')}</td>"
                 f"<td>{r.get('close_date', '\u2014')}</td>"
@@ -120,12 +138,20 @@ def _build_plain_text(rfps: list[dict]) -> str:
     """Build plain-text listing."""
     lines: list[str] = []
     for r in rfps:
-        lines.append(
+        entry = (
             f"[{r['state']}] {r.get('title', 'Untitled')}\n"
             f"  ID: {r.get('rfp_id', '\u2014')}  |  Agency: {r.get('agency', '\u2014')}\n"
             f"  Status: {r.get('status', '\u2014')}  |  Closes: {r.get('close_date', '\u2014')}\n"
-            f"  {r.get('url', '')}\n"
         )
+        if r.get("recipient"):
+            entry += f"  Recipient: {r['recipient']}"
+            if r.get("recipient_state"):
+                entry += f" ({r['recipient_state']})"
+            entry += "\n"
+        if r.get("pi_name"):
+            entry += f"  PI: {r['pi_name']}\n"
+        entry += f"  {r.get('url', '')}\n"
+        lines.append(entry)
     return "\n".join(lines)
 
 
